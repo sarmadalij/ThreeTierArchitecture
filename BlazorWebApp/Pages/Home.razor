@@ -1,0 +1,116 @@
+﻿@page "/"
+@using BlazorWebApp.Services
+@using BusinessLogic.DTOs
+@using BusinessLogic.Entities
+@using NetcodeHub.Packages.Components.Validations.OnInput
+@using NetcodeHub.Packages.Components.Toast
+@using NetcodeHub.Packages.Components.Modal
+@inject IEmployeeService employeeService
+
+<PageTitle>Home</PageTitle>
+
+<div class="row">
+
+    <div class="col-lg-6">
+        <h4> Response: @_message</h4>
+
+        <EditForm Model="employee" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+
+            <FloatingText @bind-Value="employee.Name"
+                          Label="Full Name"
+                          Placeholder="John Doe"
+                          class="form-control mb-3" />
+            <ValidationMessage For="()=>employee.Name" />
+
+            <FloatingText @bind-Value="employee.Email"
+                          Label="Email"
+                          Placeholder="johndoe@gmail.com"
+                          class="form-control" />
+            <ValidationMessage For="()=>employee.Email" />
+
+            <button type="submit" class="btn btn-primary">Save</button>
+        </EditForm>
+    </div>
+
+    @* employees list in table  *@
+    <div class="col-lg-6">
+        @if (employeesList != null)
+        {
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var employee in employeesList)
+                    {
+                        <tr>
+                            <td>@employee.Id</td>
+                            <td>@employee.Name</td>
+                            <td>@employee.Email</td>
+
+                            <td>
+                                @* delete button *@
+                                <button class="btn btn-danger" @onclick="()=>DeleteEmployee(employee.Id)">Delete</button>
+                                @* update button *@
+                                <button class="btn btn-primary" @onclick="()=>EditEmployee(employee)">Edit</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+</div>
+
+@code {
+    Employee employee = new();
+    string _message = string.Empty;
+
+    //method to save employee data in database
+    async Task Save()
+    {
+        var response = new ServiceResponse(false, null!);
+
+        if (employee.Id > 0)
+        {
+            response = await employeeService.UpdateAsync(employee);
+        }
+        else
+        {
+            response = await employeeService.AddAsync(employee);
+        }
+
+        _message = response.message;
+        await OnInitializedAsync();
+    }
+
+    //get all list of employees
+    List<Employee> employeesList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        employeesList = await employeeService.GetAsync();
+    }
+
+    //for delete employee
+    async Task DeleteEmployee(int id)
+    {
+        var (Flag, message) = await employeeService.DeleteAsync(id);
+        _message = message;
+        if (Flag)
+        {
+            employeesList = await employeeService.GetAsync();
+        }
+    }
+
+    //for edit employee
+    void EditEmployee(Employee emp) => employee = emp;
+
+}
